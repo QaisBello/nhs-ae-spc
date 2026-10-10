@@ -1,0 +1,15 @@
+check,rows_affected,finding,action
+Files read,82,82 monthly CSV files as downloaded,-
+Duplicate month,215,February-2021-revised-280421-df123.csv repeats MSitAE-FEBRUARY-2021 (also in February-2021-revised-280421-df123 (1).csv),Skipped
+Stray columns,198,Monthly-AE-September-2024.csv: 6 empty columns with no header,Dropped
+Column layouts,2,16 columns in 7 files; 22 columns in 75 files,Mapped every name the source has used to one standard set
+Whitespace in Org Code,7,Trailing spaces in names,Trimmed
+Whitespace in Parent Org,13828,Trailing spaces in names,Trimmed
+Whitespace in Org name,3,Trailing spaces in names,Trimmed
+Booked-appointment columns,1573,Booked appointments were not reported separately in Jan-Jul 2020 files,Set to 0 for those months; totals unaffected
+TOTAL rows,81,"England total row mixed in with providers (Jan-Mar 2020: blank code, name 'Total')",Removed; used only to check the sums
+Region names,598,"Jan-Mar 2020 files name sub-regions, e.g. 'Midlands (West Midlands)'",Mapped to the seven NHS England regions
+Sum check,0,Months (of 81) where providers do not sum to the TOTAL row (max gap 0 attendances),Provider sums used; gap reported
+Name case,16567,"Organisation names in capitals in most files, mixed case in others","Converted to title case, keeping NHS and acronyms"
+Provider-months,16567,"253 providers, 81 months",Written to ae_monthly.csv
+Reconciliation,12,2025-26 four-hour performance recomputed as 74.9% (NAO reports 74.9%),Matches

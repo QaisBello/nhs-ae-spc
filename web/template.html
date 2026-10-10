@@ -1,0 +1,458 @@
+<title>A&amp;E, Read with SPC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+/* Layout: a board-report page. Headline numbers, then one SPC chart the reader can point at any trust or region,
+   then every major A&E summarised as variation x assurance, then how the raw files were cleaned. */
+:root{
+  --paper:#f4f5f7; --card:#fcfcfd; --ink:#101d2c; --ink-2:#465668; --muted:#7c8896; --rule:#dfe3e8; --axis:#c6cdd5;
+  --accent:#1f5fa8; --imp:#2b8fd6; --con:#e3870e; --cc:#98a2ad; --neu:#6b4fbb; --target:#cf2f2f; --ok:#16845f;
+  --band:rgba(31,95,168,.06);
+  --sans:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --paper:#0b1118; --card:#121a23; --ink:#e8eef4; --ink-2:#b2bfcb; --muted:#7f8c99; --rule:#222f3d; --axis:#34465a;
+  --accent:#5b9be3; --imp:#4aa8ec; --con:#f29d2e; --cc:#6f7b87; --neu:#9c83e6; --target:#ef5b5b; --ok:#33b487;
+  --band:rgba(91,155,227,.08); color-scheme:dark; } }
+:root[data-theme="dark"]{
+  --paper:#0b1118; --card:#121a23; --ink:#e8eef4; --ink-2:#b2bfcb; --muted:#7f8c99; --rule:#222f3d; --axis:#34465a;
+  --accent:#5b9be3; --imp:#4aa8ec; --con:#f29d2e; --cc:#6f7b87; --neu:#9c83e6; --target:#ef5b5b; --ok:#33b487;
+  --band:rgba(91,155,227,.08); color-scheme:dark; }
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:14.5px;line-height:1.55}
+.wrap{max-width:1240px;margin:0 auto;padding-inline:clamp(16px,3vw,32px);padding-block:28px 56px;display:flex;flex-direction:column;gap:18px}
+h1,h2,h3,p{margin:0}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.num{font-variant-numeric:tabular-nums}
+.head{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:24px 40px;align-items:end}
+.head h1{font-weight:800;font-size:clamp(44px,6.6vw,84px);line-height:.95;letter-spacing:-.035em;margin-top:12px}
+.head h1 span{color:var(--accent)}
+.lede{font-size:clamp(16px,1.5vw,19px);line-height:1.5;color:var(--ink-2);margin-top:16px;max-width:54ch}
+.lede b{color:var(--ink)}
+.src{font-family:var(--mono);font-size:11px;color:var(--muted);display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:14px}
+.src a{color:var(--ink)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+.dot.live{background:var(--ok)}
+.card{background:var(--card);border:1px solid var(--rule);border-radius:16px;padding:18px 20px}
+.howto{display:flex;flex-direction:column;gap:10px;font-size:13.5px;color:var(--ink-2)}
+.howto b{color:var(--ink)}
+.keyrow{display:grid;grid-template-columns:22px 1fr;gap:4px 10px;align-items:center}
+.pt{width:12px;height:12px;border-radius:50%;display:inline-block;justify-self:center}
+.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border:1px solid var(--rule);border-radius:16px;background:var(--card);overflow:hidden}
+.kpi{padding:14px 16px;border-right:1px solid var(--rule);min-width:0}
+.kpi:last-child{border-right:0}
+.kpi .k{font-size:12px;color:var(--ink-2);font-weight:600}
+.kpi .v{font-weight:800;font-size:clamp(24px,2.6vw,32px);line-height:1.1;margin-top:4px;letter-spacing:-.02em}
+.kpi .v small{font-size:.45em;font-weight:600;color:var(--muted);margin-left:3px;letter-spacing:0}
+.kpi .s{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:3px}
+.panel{background:var(--card);border:1px solid var(--rule);border-radius:16px;padding:20px 22px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel h2{font-weight:800;font-size:clamp(20px,2.1vw,25px);line-height:1.15;letter-spacing:-.02em}
+.sub{color:var(--ink-2);max-width:80ch}
+.sub b{color:var(--ink)}
+.controls{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:end}
+.ctl{display:flex;flex-direction:column;gap:4px;min-width:0}
+.ctl label,.ctl .l{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+select,input[type=search]{font:inherit;font-size:13.5px;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:7px 10px;max-width:100%}
+#area{min-width:min(340px,100%)}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:10px;overflow:hidden;background:var(--paper);flex-wrap:wrap}
+.seg button{all:unset;cursor:pointer;font-size:13px;padding:7px 12px;color:var(--ink-2);border-right:1px solid var(--rule)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper);font-weight:600}
+.seg button:focus-visible,.btn:focus-visible,.mx button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{font:inherit;font-size:12.5px;font-weight:600;border-radius:10px;padding:7px 12px;border:1px solid var(--rule);background:var(--card);color:var(--ink);cursor:pointer}
+.chartbox{position:relative;min-width:0}
+#chart{width:100%;height:400px;display:block}
+.verdict{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:14px;align-items:center;border-top:1px solid var(--rule);padding-top:12px}
+.verdict p{color:var(--ink-2);font-size:14px}
+.verdict p b{color:var(--ink)}
+.icon{display:flex;flex-direction:column;align-items:center;gap:3px;font-family:var(--mono);font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;text-align:center;width:72px}
+.hint{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:14px;height:0;border-top:2px solid}
+.legend i.p{width:10px;height:10px;border:0;border-radius:50%}
+.grid2{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:20px;align-items:start}
+.mx{display:grid;grid-template-columns:auto repeat(3,minmax(0,1fr));gap:4px;font-size:12px}
+.mx .h{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:end;justify-content:center;text-align:center;padding:2px}
+.mx .rh{justify-content:flex-end;align-items:center;text-align:right}
+.mx button{all:unset;cursor:pointer;border-radius:8px;padding:10px 4px;text-align:center;font-weight:800;font-size:20px;border:1px solid var(--rule);background:var(--paper);font-variant-numeric:tabular-nums}
+.mx button[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.mx button.zero{color:var(--muted);font-weight:500}
+.tablewrap{max-height:560px;overflow:auto;border:1px solid var(--rule);border-radius:12px}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th{position:sticky;top:0;background:var(--card);font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:500;text-align:left;padding:7px 10px;border-bottom:1px solid var(--rule);white-space:nowrap;z-index:1}
+th button{all:unset;cursor:pointer}
+td{padding:6px 10px;border-bottom:1px solid var(--rule);vertical-align:middle}
+td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:var(--band)}
+td .reg{font-size:11px;color:var(--muted)}
+.pipe{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr);gap:12px;align-items:stretch}
+.stage{border:1px solid var(--rule);border-radius:12px;padding:12px 14px;min-width:0}
+.stage .t{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.stage .n{font-weight:800;font-size:26px;letter-spacing:-.02em}
+.stage .d{font-size:12.5px;color:var(--ink-2)}
+.stage a{color:var(--accent);font-size:12.5px;font-weight:600;text-decoration:none}
+.arrow{align-self:center;color:var(--muted);font-size:20px}
+.fixes{display:flex;flex-direction:column;gap:6px}
+.fix{display:grid;grid-template-columns:minmax(0,190px) 80px minmax(0,1fr);gap:10px;font-size:12.5px;border-bottom:1px solid var(--rule);padding:6px 0;color:var(--ink-2)}
+.fix b{color:var(--ink)}
+svg text{fill:var(--ink-2);font-family:var(--sans);font-size:11px}
+.axis text{fill:var(--muted);font-family:var(--mono);font-size:10px}
+.axis line{stroke:var(--axis)}
+.tip{position:fixed;pointer-events:none;opacity:0;background:var(--ink);color:var(--paper);font-size:12px;padding:8px 10px;border-radius:8px;max-width:280px;z-index:20;transition:opacity .1s;line-height:1.45}
+footer{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:6px}
+footer a{color:var(--ink-2)}
+@media (max-width:900px){
+  .head{grid-template-columns:1fr}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kpi{border-bottom:1px solid var(--rule)}
+  .grid2{grid-template-columns:1fr}
+  .pipe{grid-template-columns:1fr}.arrow{transform:rotate(90deg);justify-self:center}
+  .verdict{grid-template-columns:auto auto;}
+  .verdict p{grid-column:1/-1}
+  #chart{height:320px}
+  .fix{grid-template-columns:1fr auto}
+  .fix span:last-child{grid-column:1/-1}
+}
+</style>
+<!--SITEBAR-->
+<div class="wrap">
+  <header class="head">
+    <div>
+      <div class="eyebrow">Health Data · NHS England A&amp;E statistics, Jan 2020 – <span id="lastm">Sep 2026</span></div>
+      <h1>A&amp;E, read with <span>SPC</span></h1>
+      <p class="lede">Four-hour performance for every major A&amp;E in England, charted the way NHS boards are asked to read it: <b>statistical process control</b>, which separates real change from normal month-to-month noise, and tells you whether a target will be met <b>without something changing</b>.</p>
+      <div class="src" id="src"><span class="dot"></span>Loading…</div>
+    </div>
+    <aside class="card howto">
+      <div class="eyebrow">How to read the chart</div>
+      <div class="keyrow"><span class="pt" style="background:var(--cc)"></span><span><b>Grey points</b> are common cause: the normal variation of a stable process. Reacting to them is chasing noise.</span></div>
+      <div class="keyrow"><span class="pt" style="background:var(--imp)"></span><span><b>Blue</b> is special cause improvement, <b style="color:var(--con)">orange</b> special cause concern: a point outside the limits, a run of 7 above or below the average, 7 rising or falling, or 2 of 3 close to a limit.</span></div>
+      <div class="keyrow"><svg width="22" height="10"><line x1="0" x2="22" y1="5" y2="5" stroke="var(--target)" stroke-width="2" stroke-dasharray="5 3"/></svg><span><b>A target</b> above the upper limit will consistently be missed; inside the limits, hitting it is down to chance.</span></div>
+    </aside>
+  </header>
+
+  <section class="kpis" id="kpis" aria-label="Headline figures"></section>
+
+  <section class="panel" aria-labelledby="spc-h">
+    <div>
+      <h2 id="spc-h">One chart, any trust</h2>
+      <p class="sub">Pick an area and a measure. Limits are worked out from the points shown. <b>Click a point to rebase</b>, starting new limits there after a known change, such as COVID in spring 2020.</p>
+    </div>
+    <div class="controls">
+      <div class="ctl"><label for="area">Area</label><select id="area"></select></div>
+      <div class="ctl"><span class="l">Measure</span><div class="seg" id="measure" role="group" aria-label="Measure"></div></div>
+      <div class="ctl"><span class="l">Period</span><div class="seg" id="period" role="group" aria-label="Period"></div></div>
+      <div class="ctl"><span class="l">&nbsp;</span><button class="btn" id="clear" type="button">Clear rebases</button></div>
+    </div>
+    <div class="chartbox"><svg id="chart" role="img" aria-label="SPC chart"></svg></div>
+    <div class="legend" id="legend"></div>
+    <div class="verdict" id="verdict"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="mx-h">
+    <div>
+      <h2 id="mx-h">Every major A&amp;E, summarised</h2>
+      <p class="sub" id="mx-sub"></p>
+    </div>
+    <div class="grid2">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="mx" id="mx"></div>
+        <p class="hint">Click a cell to filter the table. Rows are what the latest month says; columns are whether the 82% target will be met.</p>
+        <div class="ctl"><label for="region">Region</label><select id="region"><option value="">All regions</option></select></div>
+        <div class="ctl"><label for="find">Find a trust</label><input type="search" id="find" placeholder="e.g. Leeds"></div>
+      </div>
+      <div class="tablewrap"><table id="tbl"></table></div>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="raw-h">
+    <div>
+      <h2 id="raw-h">From 82 downloads to one table</h2>
+      <p class="sub">NHS England publishes one file a month, and the format has changed over time. <code>src/clean.py</code> reconciles them and logs every fix. The check that matters: recomputed 2025-26 performance should match the National Audit Office's published figure.</p>
+    </div>
+    <div class="pipe" id="pipe"></div>
+    <div class="fixes" id="fixes"></div>
+  </section>
+
+  <footer>
+    <div><b>Source:</b> NHS England, A&amp;E Attendances and Emergency Admissions, monthly provider files, Jan 2020 – <span class="lastm2">Sep 2026</span>. Contains public sector information licensed under the Open Government Licence v3.0. Four-hour performance counts all A&amp;E types, booked appointments included, as NHS England reports it.</div>
+    <div><b>Method:</b> XmR charts following NHS England's Making Data Count guidance, with the rules of the NHS-R Community's NHSRplotthedots package (screened moving ranges, limits at 2.66 × the average moving range). "12-hour waits" are from decision to admit to admission, not from arrival. Targets: 95% constitutional standard; 82% interim target for 2026/27.</div>
+    <div>Built by Qais Adeniji-Bello. <a href="https://github.com/QaisBello/nhs-ae-spc" target="_blank" rel="noopener">Code and data on GitHub</a>.</div>
+  </footer>
+</div>
+<div class="tip" id="tip"></div>
+<script>
+/*SPC-START*/
+// XmR / Making Data Count rules, a line-by-line port of src/spc.py (tests/test_spc_js.py checks they agree).
+const SPC=(()=>{
+  const LIMIT=2.66, SCREEN=3.267, NEAR=2.66*2/3;
+  const sign=v=>(v>0)-(v<0);
+  function limits(v,screen=true){
+    const mean=v.reduce((a,b)=>a+b,0)/v.length;
+    const mr=v.slice(1).map((b,i)=>Math.abs(b-v[i]));
+    if(!mr.length)return [mean,0];
+    let amr=mr.reduce((a,b)=>a+b,0)/mr.length;
+    if(screen){const k=mr.filter(m=>m<SCREEN*amr);if(k.length)amr=k.reduce((a,b)=>a+b,0)/k.length;}
+    return [mean,amr];
+  }
+  const partOfSeven=v=>v.map((_,i)=>{for(let k=0;k<7;k++)if(i+k<v.length&&v[i+k]!==0)return true;return false;});
+  function sevenTrend(y){const o=y.map(()=>0);for(let i=6;i<y.length;i++){const d=new Set();for(let j=i-5;j<=i;j++)d.add(sign(y[j]-y[j-1]));if(d.size===1&&!d.has(0))o[i]=[...d][0];}return o;}
+  function sevenOneSide(r){return r.map((v,i)=>{if(v===0||i<6)return 0;for(let k=1;k<7;k++)if(r[i-k]!==v)return 0;return 1;});}
+  function twoInThree(close,rtm){
+    const vp=[0,0,...close,0,0], rp=[0,0,...rtm,0,0], s=(a,i)=>a[i]+a[i+1]+a[i+2];
+    return close.map((c,i)=>c&&[0,1,2].some(k=>s(vp,i+k)>=2&&Math.abs(s(rp,i+k))===3));
+  }
+  function segmentRules(p){
+    const y=p.map(d=>d.y), rtm=p.map(d=>sign(d.y-d.mean));
+    const out=p.map(d=>d.y>d.upl||d.y<d.lpl);
+    const close=p.map((d,i)=>(!out[i]&&(d.y<d.near_lpl||d.y>d.near_upl))?1:0);
+    const trend=partOfSeven(sevenTrend(y)), two3=twoInThree(close,rtm), shift=partOfSeven(sevenOneSide(rtm));
+    const sdy=y.slice(1).map((b,i)=>sign(b-y[i]));
+    return y.map((_,i)=>{
+      const side=rtm[i]>0?"high":"low";
+      if(out[i])return ["outside",side];
+      if(trend[i]){const nxt=i+1<y.length&&trend[i+1];const st=nxt?(i<sdy.length?sdy[i]:sdy[sdy.length-1]):(i?sdy[i-1]:0);return ["trend",st===1?"high":"low"];}
+      if(two3[i])return ["two_of_three",side];
+      if(shift[i])return ["shift",side];
+      return null;
+    });
+  }
+  function spc(x,y,improvement="increase",rebase=[],screen=true){
+    const starts=[...new Set([0,...rebase.map(r=>x.indexOf(r)).filter(i=>i>0)])].sort((a,b)=>a-b);
+    const out=[];
+    starts.forEach((a,s)=>{
+      const b=s+1<starts.length?starts[s+1]:y.length;
+      const [mean,amr]=limits(y.slice(a,b),screen);
+      const pts=[];for(let i=a;i<b;i++)pts.push({x:x[i],y:y[i],segment:s,mean,lpl:mean-LIMIT*amr,upl:mean+LIMIT*amr,near_lpl:mean-NEAR*amr,near_upl:mean+NEAR*amr,rule:"",variation:"common_cause"});
+      segmentRules(pts).forEach((r,i)=>{if(!r)return;const p=pts[i];p.rule=r[0];
+        p.variation=improvement==="neutral"?"neutral_"+r[1]:((r[1]==="high")===(improvement==="increase")?"improvement":"concern");});
+      out.push(...pts);
+    });
+    return out;
+  }
+  function assurance(p,target,improvement="increase"){
+    if(target==null||improvement==="neutral")return null;
+    const l=p[p.length-1];
+    if(target>l.upl)return improvement==="increase"?"fail":"pass";
+    if(target<l.lpl)return improvement==="increase"?"pass":"fail";
+    return "inconsistent";
+  }
+  return {spc,assurance,limits};
+})();
+/*SPC-END*/
+
+const SOURCE={repo:"QaisBello/nhs-ae-spc",branch:"main"};
+const FALLBACKS=/*FALLBACKS*/["../"];
+const RAWURL=f=>`https://raw.githubusercontent.com/${SOURCE.repo}/${SOURCE.branch}/${f}`;
+async function get(path){for(const [u,k] of [[RAWURL(path),"live"],...FALLBACKS.map(f=>[f+path,"snapshot"])]){try{const r=await fetch(u,{cache:"no-store"});if(!r.ok)throw 0;return {t:await r.text(),k};}catch(e){}}throw new Error(path);}
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const fmt=d3.format(","), f1=d3.format(".1f"), pm=d3.timeParse("%Y-%m"), mlab=d3.timeFormat("%b %Y");
+const ML=m=>mlab(pm(m));
+const tip=document.getElementById("tip");
+function showTip(e,h){tip.innerHTML=h;tip.style.opacity=1;const r=tip.getBoundingClientRect();let x=e.clientX+14,y=e.clientY+14;if(x+r.width>innerWidth-8)x=e.clientX-r.width-14;if(y+r.height>innerHeight-8)y=e.clientY-r.height-14;tip.style.left=x+"px";tip.style.top=y+"px";}
+function hideTip(){tip.style.opacity=0;}
+
+const MEASURES={
+  pct_4hr:{label:"Four-hour, all types",short:"4hr all",unit:"%",dir:"increase",targets:[[95,"95% standard"],[82,"82% target 2026/27"]],f:r=>r.attendances?100*(1-r.over_4hrs/r.attendances):null},
+  pct_4hr_type1:{label:"Four-hour, Type 1 (major A&E)",short:"4hr Type 1",unit:"%",dir:"increase",targets:[[95,"95% standard"]],f:r=>r.type1_attendances?100*(1-r.type1_over_4hrs/r.type1_attendances):null},
+  dta_12hr_plus:{label:"12-hour waits, decision to admit",short:"12hr waits",unit:"",dir:"decrease",targets:[],f:r=>r.dta_12hr_plus},
+  attendances:{label:"Attendances",short:"Attendances",unit:"",dir:"neutral",targets:[],f:r=>r.attendances},
+};
+const PERIODS=[["24","Last 24 months"],["2022-04","Since Apr 2022"],["all","Since Jan 2020"]];
+const VCOL={improvement:"--imp",concern:"--con",common_cause:"--cc",neutral_high:"--neu",neutral_low:"--neu"};
+const RULE={outside:"outside the process limits",trend:"part of 7 points rising or falling",two_of_three:"2 of 3 points close to a limit",shift:"part of 7 points on one side of the average"};
+const NUM=["attendances","over_4hrs","type1_attendances","type1_over_4hrs","dta_4_12hr","dta_12hr_plus","emergency_admissions"];
+let SERIES={}, NAMES={}, SUMMARY, S, MONTHS, kind="snapshot";
+const state={area:"ENG",measure:"pct_4hr",period:"24",rebase:[],cell:null,region:"",find:"",sort:["pct_4hr_latest",1]};
+
+/* ---------- icons: variation (H/L arrow in a coloured circle) and assurance (P/F/?) */
+function vIcon(v,dir,size=34){
+  const c=css(VCOL[v]||"--cc"), r=size/2-2;
+  const letter=v==="common_cause"?"":(v==="improvement"?(dir==="increase"?"H":"L"):v==="concern"?(dir==="increase"?"L":"H"):(v==="neutral_high"?"H":"L"));
+  const wave=`<path d="M${size*.22} ${size*.55} q${size*.07} -${size*.18} ${size*.14} 0 t${size*.14} 0 t${size*.14} 0" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round"/>`;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true"><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${c}" stroke-width="2.4"/>${letter?`<text x="${size/2}" y="${size/2}" dy=".36em" text-anchor="middle" style="fill:${c};font-weight:800;font-size:${size*.42}px;font-family:var(--sans)">${letter}</text>`:wave}</svg>`;
+}
+function aIcon(a,size=34){
+  if(!a)return `<svg width="${size}" height="${size}" aria-hidden="true"><circle cx="${size/2}" cy="${size/2}" r="${size/2-2}" fill="none" stroke="${css("--rule")}" stroke-width="2.4" stroke-dasharray="3 3"/></svg>`;
+  const c=css(a==="pass"?"--imp":a==="fail"?"--con":"--cc"), l=a==="pass"?"P":a==="fail"?"F":"?";
+  return `<svg width="${size}" height="${size}" aria-hidden="true"><circle cx="${size/2}" cy="${size/2}" r="${size/2-2}" fill="${c}"/><text x="${size/2}" y="${size/2}" dy=".36em" text-anchor="middle" style="fill:#fff;font-weight:800;font-size:${size*.42}px;font-family:var(--sans)">${l}</text></svg>`;
+}
+const VNAME={improvement:"Improvement",concern:"Concern",common_cause:"Common cause",neutral_high:"Special cause (high)",neutral_low:"Special cause (low)"};
+const ANAME={pass:"Will consistently pass",fail:"Will consistently fail",inconsistent:"May pass or fail"};
+
+/* ---------- KPIs */
+function kpis(){
+  const t=SUMMARY, ch=100*(t.dta12_last12/t.dta12_prev12-1);
+  const K=[[`England, ${ML(t.england_latest_month)}`,f1(t.england_latest)+"<small>%</small>","within four hours, all types"],
+    ["England, 2025-26",f1(t.fy_2025_26)+"<small>%</small>",`NAO reports 74.9% · ${t.fy_2025_26===74.9?"matches":"check"}`],
+    ["Trusts set to miss 82%",`${t.trusts_consistent_fail}<small>of ${t.trusts}</small>`,"target above upper limit"],
+    [`Trusts at 82%+, ${ML(t.england_latest_month).slice(0,3)}`,`${t.trusts_above_target_latest}<small>of ${t.trusts}</small>`,"major A&Es in the latest month"],
+    ["12-hour waits, last 12 months",d3.format(".3~s")(t.dta12_last12).replace("k","k"),`${ch>=0?"+":""}${f1(ch)}% on the 12 months before`]];
+  document.getElementById("kpis").innerHTML=K.map(([k,v,s])=>`<div class="kpi"><div class="k">${k}</div><div class="v num">${v}</div><div class="s">${s}</div></div>`).join("");
+}
+
+/* ---------- SPC chart */
+function series(){
+  const m=MEASURES[state.measure], rows=SERIES[state.area]||[];
+  let pts=rows.map(r=>({x:r.month,y:m.f(r)})).filter(d=>d.y!=null&&isFinite(d.y));
+  if(state.period==="24")pts=pts.filter(d=>d.x>=MONTHS[MONTHS.length-24]);
+  else if(state.period!=="all")pts=pts.filter(d=>d.x>=state.period);
+  return pts;
+}
+function draw(){
+  const m=MEASURES[state.measure], raw=series(), svg=d3.select("#chart");
+  svg.selectAll("*").remove();
+  const box=svg.node().getBoundingClientRect(), W=box.width, H=box.height, mg={t:14,r:W<600?14:120,b:28,l:W<600?40:52};
+  if(raw.length<2){svg.append("text").attr("x",20).attr("y",30).text("Not enough months to chart.");document.getElementById("verdict").innerHTML="";return;}
+  const rebase=state.rebase.filter(r=>raw.some(d=>d.x===r));
+  const P=SPC.spc(raw.map(d=>d.x),raw.map(d=>d.y),m.dir,rebase);
+  const x=d3.scaleTime().domain(d3.extent(P,d=>pm(d.x))).range([mg.l,W-mg.r]);
+  const targets=m.targets;
+  // keep the nearest target in view; the 95% standard is drawn only when the data come close to it
+  const lo=d3.min([...P.map(d=>d.y),...P.map(d=>d.lpl)]), hi=d3.max([...P.map(d=>d.y),...P.map(d=>d.upl),...targets.slice(-1).map(t=>t[0])]);
+  const pad=(hi-lo)*.06||1;
+  const y=d3.scaleLinear().domain([m.unit==="%"?Math.max(0,lo-pad):Math.max(0,lo-pad),m.unit==="%"?Math.min(100,hi+pad):hi+pad]).nice().range([H-mg.b,mg.t]);
+  const yf=m.unit==="%"?(v=>v+"%"):d3.format("~s");
+  svg.append("g").attr("class","axis").attr("transform",`translate(${mg.l},0)`).call(d3.axisLeft(y).ticks(6).tickSize(-(W-mg.l-mg.r)).tickFormat(yf))
+    .call(g=>{g.select(".domain").remove();g.selectAll(".tick line").attr("stroke",css("--rule"));});
+  svg.append("g").attr("class","axis").attr("transform",`translate(0,${H-mg.b})`).call(d3.axisBottom(x).ticks(W<600?4:8).tickSize(3).tickFormat(d3.timeFormat("%b %y"))).select(".domain").attr("stroke",css("--axis"));
+  // segments: band between limits, mean and limit lines
+  const segs=d3.groups(P,d=>d.segment);
+  const half=P.length>1?(x(pm(P[1].x))-x(pm(P[0].x)))/2:0;
+  segs.forEach(([s,p],k)=>{
+    const x0=x(pm(p[0].x))-(k?half:0), x1=x(pm(p[p.length-1].x)), a=p[0];
+    svg.append("rect").attr("x",x0).attr("width",Math.max(0,x1-x0)).attr("y",y(Math.min(a.upl,y.domain()[1]))).attr("height",Math.max(0,y(Math.max(a.lpl,y.domain()[0]))-y(Math.min(a.upl,y.domain()[1])))).attr("fill",css("--band"));
+    [[a.mean,"--ink-2",null,1.4],[a.upl,"--muted","4 3",1.2],[a.lpl,"--muted","4 3",1.2]].forEach(([v,c,da,w])=>{
+      if(v<y.domain()[0]||v>y.domain()[1])return;
+      svg.append("line").attr("x1",x0).attr("x2",x1).attr("y1",y(v)).attr("y2",y(v)).attr("stroke",css(c)).attr("stroke-width",w).attr("stroke-dasharray",da);
+    });
+    if(k)svg.append("line").attr("x1",x0).attr("x2",x0).attr("y1",mg.t).attr("y2",H-mg.b).attr("stroke",css("--ink-2")).attr("stroke-dasharray","2 3");
+  });
+  const last=P[P.length-1];
+  if(W>=600){
+    [[last.upl,"Upper limit"],[last.mean,"Average"],[last.lpl,"Lower limit"]].forEach(([v,l])=>{
+      if(v<y.domain()[0]||v>y.domain()[1])return;
+      svg.append("text").attr("x",W-mg.r+8).attr("y",y(v)).attr("dy",".35em").style("font-size","10.5px").style("fill",css("--muted")).text(`${l} ${m.unit==="%"?f1(v)+"%":fmt(Math.round(v))}`);
+    });
+  }
+  targets.forEach(([t,l])=>{
+    if(t<y.domain()[0]||t>y.domain()[1])return;
+    svg.append("line").attr("x1",mg.l).attr("x2",W-mg.r).attr("y1",y(t)).attr("y2",y(t)).attr("stroke",css("--target")).attr("stroke-width",1.6).attr("stroke-dasharray","6 4");
+    svg.append("text").attr("x",W>=600?W-mg.r+8:mg.l+4).attr("y",y(t)).attr("dy",W>=600?".35em":"-.4em").style("font-size","10.5px").style("fill",css("--target")).style("font-weight","600").text(l);
+  });
+  svg.append("path").datum(P).attr("fill","none").attr("stroke",css("--ink-2")).attr("stroke-width",1.3).attr("d",d3.line().x(d=>x(pm(d.x))).y(d=>y(d.y)));
+  svg.append("g").selectAll("circle").data(P).join("circle").attr("cx",d=>x(pm(d.x))).attr("cy",d=>y(d.y)).attr("r",W<600?3.4:4.4)
+    .attr("fill",d=>css(VCOL[d.variation])).attr("stroke",css("--card")).attr("stroke-width",1.2).style("cursor","pointer")
+    .on("mousemove",(e,d)=>showTip(e,`<b>${ML(d.x)}</b>: ${m.unit==="%"?f1(d.y)+"%":fmt(Math.round(d.y))}<br>${VNAME[d.variation]}${d.rule?" · "+RULE[d.rule]:""}<br><span style="opacity:.7">Click to ${state.rebase.includes(d.x)?"remove the rebase":"rebase here"}</span>`))
+    .on("mouseleave",hideTip)
+    .on("click",(e,d)=>{if(d.x===P[0].x)return;state.rebase=state.rebase.includes(d.x)?state.rebase.filter(r=>r!==d.x):[...state.rebase,d.x];hideTip();draw();});
+  const L=[["--ink-2","","Average"],["--muted","4 3","Process limits"],["--target","6 4","Target"]].map(([c,da,l])=>`<span><i style="border-color:${css(c)};${da?"border-top-style:dashed":""}"></i>${l}</span>`).join("")
+    +[["improvement","Improvement"],["concern","Concern"],["common_cause","Common cause"]].concat(m.dir==="neutral"?[["neutral_high","Special cause"]]:[]).map(([v,l])=>`<span><i class="p" style="background:${css(VCOL[v])}"></i>${l}</span>`).join("");
+  document.getElementById("legend").innerHTML=L;
+  verdict(P,m);
+}
+function verdict(P,m){
+  const l=P[P.length-1], name=NAMES[state.area], tgt=m.targets.length?m.targets[m.targets.length-1][0]:null;
+  const a=SPC.assurance(P,tgt,m.dir), v=(x)=>m.unit==="%"?f1(x)+"%":fmt(Math.round(x));
+  const recent=P.slice(-6).filter(d=>d.variation!=="common_cause");
+  let s=`<b>${name}, ${ML(l.x)}: ${v(l.y)}.</b> `;
+  if(l.variation==="common_cause")s+=`That is within the limits (${v(l.lpl)} to ${v(l.upl)}) of a stable process averaging ${v(l.mean)}: common cause variation, so no single month is a story on its own. `;
+  else s+=`That is <b>special cause ${l.variation.startsWith("neutral")?"variation":l.variation}</b> (${RULE[l.rule]}): something has changed, and it is worth finding out what. `;
+  if(recent.length&&l.variation==="common_cause")s+=`${recent.length} of the last 6 months flagged special cause. `;
+  if(a==="fail")s+=`The ${tgt}% target sits above the upper limit, so <b>this process will not meet it without a change to the system</b>. `;
+  else if(a==="pass")s+=`The ${tgt}% target sits below the lower limit, so it will be met every month if the process holds. `;
+  else if(a==="inconsistent")s+=`The ${tgt}% target sits inside the limits, so it will be hit in some months and missed in others by chance. `;
+  if(state.rebase.length)s+=`<span class="hint">Rebased at ${state.rebase.filter(r=>P.some(d=>d.x===r)).sort().map(ML).join(", ")}.</span>`;
+  document.getElementById("verdict").innerHTML=`<div class="icon">${vIcon(l.variation,m.dir)}<span>Variation</span></div><div class="icon">${aIcon(a)}<span>Assurance${tgt?" vs "+tgt+"%":""}</span></div><p>${s}</p>`;
+}
+
+/* ---------- controls */
+function controls(){
+  const area=document.getElementById("area"), regions=Object.keys(SERIES).filter(k=>k.startsWith("R:")).sort();
+  const trusts=S.filter(r=>r.level==="Trust").sort((a,b)=>d3.ascending(a.name,b.name));
+  area.innerHTML=`<option value="ENG">England</option><optgroup label="NHS England regions">${regions.map(r=>`<option value="${r}">${NAMES[r]}</option>`).join("")}</optgroup><optgroup label="Trusts with a major (Type 1) A&E">${trusts.map(t=>`<option value="${t.code}">${t.name}</option>`).join("")}</optgroup>`;
+  area.onchange=()=>{state.area=area.value;state.rebase=[];draw();};
+  const seg=(id,opts,key)=>{const el=document.getElementById(id);el.innerHTML=opts.map(([k,l])=>`<button type="button" data-k="${k}" aria-pressed="${state[key]===k}">${l}</button>`).join("");
+    el.querySelectorAll("button").forEach(b=>b.onclick=()=>{state[key]=b.dataset.k;el.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));draw();});};
+  seg("measure",Object.entries(MEASURES).map(([k,m])=>[k,m.short]),"measure");
+  seg("period",PERIODS,"period");
+  document.getElementById("clear").onclick=()=>{state.rebase=[];draw();};
+}
+function pickArea(code){state.area=code;state.rebase=[];document.getElementById("area").value=code;draw();document.getElementById("spc-h").scrollIntoView({behavior:"smooth",block:"start"});}
+
+/* ---------- matrix and table */
+const VROWS=[["improvement","Improving"],["common_cause","Common cause"],["concern","Concern"]], ACOLS=[["pass","Pass"],["inconsistent","Pass or fail"],["fail","Fail"]];
+function matrix(){
+  const T=S.filter(r=>r.level==="Trust");
+  let h=`<div></div>${ACOLS.map(([a,l])=>`<div class="h">${aIcon(a,22)}<br>${l}</div>`).join("")}`;
+  VROWS.forEach(([v,vl])=>{h+=`<div class="h rh">${vl}&nbsp;${vIcon(v,"increase",22)}</div>`;
+    ACOLS.forEach(([a])=>{const n=T.filter(r=>r.pct_4hr_variation===v&&r.pct_4hr_assurance===a).length, key=v+"|"+a;
+      h+=`<button type="button" class="${n?"":"zero"}" data-k="${key}" aria-pressed="${state.cell===key}" aria-label="${vl}, ${a}: ${n} trusts">${n}</button>`;});});
+  const el=document.getElementById("mx");el.innerHTML=h;
+  el.querySelectorAll("button").forEach(b=>b.onclick=()=>{state.cell=state.cell===b.dataset.k?null:b.dataset.k;matrix();table();});
+  document.getElementById("mx-sub").innerHTML=`Each of England's <b>${T.length} trusts with a major A&amp;E</b> gets the same SPC chart of four-hour performance over the last 24 months (${ML(SUMMARY.window[0])} – ${ML(SUMMARY.window[1])}). <b>${SUMMARY.trusts_consistent_fail}</b> will consistently miss the 82% target as things stand; <b>${SUMMARY.trusts_consistent_pass}</b> will consistently meet it. Click any row to chart it.`;
+}
+function spark(code){
+  const rows=(SERIES[code]||[]).filter(r=>r.month>=SUMMARY.window[0]), v=rows.map(r=>MEASURES.pct_4hr.f(r));
+  if(v.length<2)return "";
+  const w=90,h=22,x=d3.scaleLinear().domain([0,v.length-1]).range([1,w-1]),y=d3.scaleLinear().domain(d3.extent(v)).range([h-2,2]);
+  return `<svg width="${w}" height="${h}" aria-hidden="true"><path d="${d3.line().x((_,i)=>x(i)).y(d=>y(d))(v)}" fill="none" stroke="${css("--ink-2")}" stroke-width="1.2"/><circle cx="${x(v.length-1)}" cy="${y(v[v.length-1])}" r="2.4" fill="${css("--accent")}"/></svg>`;
+}
+function table(){
+  let T=S.filter(r=>r.level==="Trust");
+  if(state.cell){const [v,a]=state.cell.split("|");T=T.filter(r=>r.pct_4hr_variation===v&&r.pct_4hr_assurance===a);}
+  if(state.region)T=T.filter(r=>r.region===state.region);
+  if(state.find)T=T.filter(r=>r.name.toLowerCase().includes(state.find.toLowerCase()));
+  const [k,dirn]=state.sort; T=T.slice().sort((a,b)=>dirn*d3.ascending(a[k],b[k]));
+  const cols=[["name","Trust"],["pct_4hr_latest",`${ML(SUMMARY.window[1]).slice(0,3)} %`],["pct_4hr_mean","Average"],["pct_4hr_upl","Limits"],["","24 months"],["pct_4hr_variation","Var."],["pct_4hr_assurance","Assur."]];
+  document.getElementById("tbl").innerHTML=`<thead><tr>${cols.map(([c,l])=>`<th${c&&c!=="name"?' style="text-align:right"':""}>${c?`<button type="button" data-c="${c}">${l}${state.sort[0]===c?(state.sort[1]>0?" ↑":" ↓"):""}</button>`:l}</th>`).join("")}</tr></thead><tbody>${
+    T.map(r=>`<tr data-c="${r.code}" tabindex="0"><td>${r.name}<div class="reg">${r.region}</div></td><td class="n"><b>${f1(r.pct_4hr_latest)}</b></td><td class="n">${f1(r.pct_4hr_mean)}</td><td class="n">${f1(r.pct_4hr_lpl)}–${f1(r.pct_4hr_upl)}</td><td>${spark(r.code)}</td><td class="n" title="${VNAME[r.pct_4hr_variation]}">${vIcon(r.pct_4hr_variation,"increase",22)}</td><td class="n" title="${ANAME[r.pct_4hr_assurance]}">${aIcon(r.pct_4hr_assurance,22)}</td></tr>`).join("")
+    ||`<tr><td colspan="7" class="hint">No trusts match.</td></tr>`}</tbody>`;
+  document.querySelectorAll("#tbl th button").forEach(b=>b.onclick=()=>{const c=b.dataset.c;state.sort=[c,state.sort[0]===c?-state.sort[1]:(c==="name"?1:-1)];table();});
+  document.querySelectorAll("#tbl tbody tr[data-c]").forEach(tr=>{tr.onclick=()=>pickArea(tr.dataset.c);tr.onkeydown=e=>{if(e.key==="Enter")pickArea(tr.dataset.c);};});
+}
+
+/* ---------- raw to clean */
+function pipeline(DQ){
+  const g=c=>DQ.find(r=>r.check===c)||{};
+  const files=+g("Files read").rows_affected, pm_=g("Provider-months"), rec=g("Reconciliation");
+  const gh=`https://github.com/${SOURCE.repo}/tree/${SOURCE.branch}/data`;
+  document.getElementById("pipe").innerHTML=`
+    <div class="stage"><div class="t">data/raw</div><div class="n num">${files}</div><div class="d">monthly CSVs as downloaded, 3 layouts</div><a href="${gh}/raw" target="_blank" rel="noopener">Raw files →</a></div><div class="arrow">→</div>
+    <div class="stage"><div class="t">src/clean.py</div><div class="n num">${DQ.length}</div><div class="d">checks and fixes, every one logged</div><a href="https://github.com/${SOURCE.repo}/blob/${SOURCE.branch}/data/clean/data_quality_log.csv" target="_blank" rel="noopener">Quality log →</a></div><div class="arrow">→</div>
+    <div class="stage"><div class="t">data/clean</div><div class="n num">${fmt(+pm_.rows_affected)}</div><div class="d">provider-months · ${pm_.finding}</div><a href="${gh}/clean" target="_blank" rel="noopener">Clean tables →</a></div>`;
+  const show=DQ.filter(r=>!/Files read|Provider-months/.test(r.check));
+  document.getElementById("fixes").innerHTML=show.map(r=>`<div class="fix"><b>${r.check}</b><span class="num">${fmt(+r.rows_affected)} ${r.check==="Reconciliation"?"months":"rows"}</span><span>${r.finding} → ${r.action}</span></div>`).join("");
+}
+
+/* ---------- boot */
+async function boot(){
+  const src=document.getElementById("src");
+  try{
+    const [mon,eng,reg,sum,smy,dq]=await Promise.all(["data/clean/ae_monthly.csv","data/clean/england.csv","data/clean/regions.csv","data/clean/spc_summary.csv","data/clean/summary.json","data/clean/data_quality_log.csv"].map(get));
+    kind=eng.k;
+    const num=r=>{NUM.forEach(c=>r[c]=+r[c]);return r;};
+    SERIES.ENG=d3.csvParse(eng.t,num); NAMES.ENG="England";
+    d3.groups(d3.csvParse(reg.t,num),d=>d.region).forEach(([r,rows])=>{SERIES["R:"+r]=rows;NAMES["R:"+r]=r;});
+    const M=d3.csvParse(mon.t,num);
+    S=d3.csvParse(sum.t,d3.autoType); S.forEach(r=>{r.code=String(r.code);});
+    S.filter(r=>r.level==="Trust").forEach(r=>NAMES[r.code]=r.name);
+    d3.groups(M,d=>d.org_code).forEach(([c,rows])=>{if(NAMES[c])SERIES[c]=rows.sort((a,b)=>d3.ascending(a.month,b.month));});
+    SUMMARY=JSON.parse(smy.t); MONTHS=SERIES.ENG.map(r=>r.month);
+    document.getElementById("lastm").textContent=ML(MONTHS[MONTHS.length-1]);
+    document.querySelectorAll(".lastm2").forEach(e=>e.textContent=ML(MONTHS[MONTHS.length-1]));
+    const regs=[...new Set(S.filter(r=>r.level==="Trust").map(r=>r.region))].sort();
+    document.getElementById("region").innerHTML+=regs.map(r=>`<option>${r}</option>`).join("");
+    document.getElementById("region").onchange=e=>{state.region=e.target.value;table();};
+    document.getElementById("find").oninput=e=>{state.find=e.target.value;table();};
+    src.innerHTML=(kind==="live"?`<span class="dot live"></span>Live from <a href="https://github.com/${SOURCE.repo}" target="_blank" rel="noopener">github.com/${SOURCE.repo}</a>`:`<span class="dot"></span>Bundled snapshot`)+` · ${fmt(M.length)} provider-months`;
+    kpis(); controls(); draw(); matrix(); table(); pipeline(d3.csvParse(dq.t));
+  }catch(e){console.error(e);src.innerHTML=`<span class="dot"></span>Couldn't load the data. Try reloading.`;}
+}
+boot();
+let rt;addEventListener("resize",()=>{if(!S)return;clearTimeout(rt);rt=setTimeout(draw,150);});
+new MutationObserver(()=>{if(S){draw();matrix();table();}}).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+</script>

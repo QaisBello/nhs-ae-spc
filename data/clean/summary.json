@@ -1,0 +1,29 @@
+{
+  "window": [
+    "2024-10",
+    "2026-09"
+  ],
+  "target": 82.0,
+  "england_latest": 74.4,
+  "england_latest_month": "2026-09",
+  "england_mean": 74.6,
+  "england_upl": 76.6,
+  "england_lpl": 72.5,
+  "england_assurance": "fail",
+  "england_variation": "common_cause",
+  "fy_2025_26": 74.9,
+  "fy_2024_25": 73.9,
+  "fy_2026_27_to_date": 75.4,
+  "trusts": 120,
+  "trusts_consistent_fail": 100,
+  "trusts_consistent_pass": 2,
+  "trusts_inconsistent": 18,
+  "trusts_improving": 31,
+  "trusts_concern": 8,
+  "trusts_above_target_latest": 7,
+  "dta12_first": 2847,
+  "dta12_first_month": "2020-01",
+  "dta12_latest": 50582,
+  "dta12_last12": 618993,
+  "dta12_prev12": 547895
+}
