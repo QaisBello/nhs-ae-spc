@@ -1,0 +1,288 @@
+/// England, the 7 regions and the 120 trusts with a Type 1 department in every month of the SPC window (spc_summary.csv). Variation and assurance come from the Python SPC rules (src/spc.py).
+table Entities
+	lineageTag: 6b1794e0-1158-4693-ab75-06aaa3b92ca1
+
+	column level
+		dataType: string
+		lineageTag: b77a5a9b-0b07-4a9f-b3ec-22310aed1a6c
+		summarizeBy: none
+		sourceColumn: level
+
+	column code
+		dataType: string
+		isKey
+		lineageTag: 4a4e835f-b695-4d91-9e76-e7cac8c26bee
+		summarizeBy: none
+		sourceColumn: code
+
+	column name
+		dataType: string
+		lineageTag: 92a859df-eb2f-46d2-be3a-82ec46b72737
+		summarizeBy: none
+		sourceColumn: name
+
+	column region
+		dataType: string
+		lineageTag: 0d1989cd-3f5e-44b1-a072-a3a106a31ba5
+		summarizeBy: none
+		sourceColumn: region
+
+	column pct_4hr_variation
+		dataType: string
+		isHidden
+		lineageTag: 72973559-50a4-4b20-841e-8200986bd14e
+		summarizeBy: none
+		sourceColumn: pct_4hr_variation
+
+	column pct_4hr_special_6m
+		dataType: int64
+		formatString: #,0
+		lineageTag: da19761d-daee-46c3-b919-6b92a672ff82
+		summarizeBy: none
+		sourceColumn: pct_4hr_special_6m
+
+	column pct_4hr_assurance
+		dataType: string
+		isHidden
+		lineageTag: ec91d440-4f02-4c25-851e-470fa8ef83ec
+		summarizeBy: none
+		sourceColumn: pct_4hr_assurance
+
+	column pct_4hr_mean
+		dataType: double
+		isHidden
+		formatString: #,0.00
+		lineageTag: 66125194-5207-4a53-85a7-9b2398e291a2
+		summarizeBy: none
+		sourceColumn: pct_4hr_mean
+
+	column pct_4hr_lpl
+		dataType: double
+		isHidden
+		formatString: #,0.00
+		lineageTag: 2526d26a-2e6c-40a2-94b7-06a8cd7bd9aa
+		summarizeBy: none
+		sourceColumn: pct_4hr_lpl
+
+	column pct_4hr_upl
+		dataType: double
+		isHidden
+		formatString: #,0.00
+		lineageTag: 11613458-d1db-493f-b0e1-865397c512cd
+		summarizeBy: none
+		sourceColumn: pct_4hr_upl
+
+	column dta_12hr_plus_variation
+		dataType: string
+		isHidden
+		lineageTag: 1a2d1559-d6ef-4b52-888f-70da83887f2f
+		summarizeBy: none
+		sourceColumn: dta_12hr_plus_variation
+
+	column Variation
+		dataType: string
+		lineageTag: 3859ae71-f60c-477b-914d-a3afee4124b0
+		summarizeBy: none
+		sourceColumn: Variation
+
+	column Assurance
+		dataType: string
+		lineageTag: 75913478-feee-4807-9e77-12b3d419b379
+		summarizeBy: none
+		sourceColumn: Assurance
+
+	column 'Level Order'
+		dataType: int64
+		isHidden
+		formatString: #,0
+		lineageTag: af91ead1-e3b9-4e4d-b4df-e5344cc64ba1
+		summarizeBy: none
+		sourceColumn: Level Order
+
+	column pct_4hr_latest
+		dataType: string
+		lineageTag: cc7d75a3-09cd-42c3-bf7c-b080c982455c
+		summarizeBy: none
+		sourceColumn: pct_4hr_latest
+
+		annotation SummarizationSetBy = Automatic
+
+	column pct_4hr_type1_latest
+		dataType: string
+		lineageTag: e13636bd-afbf-4149-936d-7e55d4619a90
+		summarizeBy: none
+		sourceColumn: pct_4hr_type1_latest
+
+		annotation SummarizationSetBy = Automatic
+
+	column pct_4hr_type1_mean
+		dataType: string
+		lineageTag: 102ea54d-5ea0-438a-aa15-d4133b6ebd88
+		summarizeBy: none
+		sourceColumn: pct_4hr_type1_mean
+
+		annotation SummarizationSetBy = Automatic
+
+	column pct_4hr_type1_lpl
+		dataType: string
+		lineageTag: b49e190b-6a83-4db5-a8e5-43435e3b7aa9
+		summarizeBy: none
+		sourceColumn: pct_4hr_type1_lpl
+
+		annotation SummarizationSetBy = Automatic
+
+	column pct_4hr_type1_upl
+		dataType: string
+		lineageTag: 3075a5d7-5a58-472d-954c-3a14de482e2c
+		summarizeBy: none
+		sourceColumn: pct_4hr_type1_upl
+
+		annotation SummarizationSetBy = Automatic
+
+	column pct_4hr_type1_variation
+		dataType: string
+		lineageTag: bd2c1d3c-c78b-4793-abf8-04d918c048b3
+		summarizeBy: none
+		sourceColumn: pct_4hr_type1_variation
+
+		annotation SummarizationSetBy = Automatic
+
+	column pct_4hr_type1_special_6m
+		dataType: string
+		lineageTag: 3e06a85c-d9b2-49dc-935d-c9e3f7c1dbad
+		summarizeBy: none
+		sourceColumn: pct_4hr_type1_special_6m
+
+		annotation SummarizationSetBy = Automatic
+
+	column dta_12hr_plus_latest
+		dataType: string
+		lineageTag: a08a152e-432e-4b06-bec4-67ec32face7b
+		summarizeBy: none
+		sourceColumn: dta_12hr_plus_latest
+
+		annotation SummarizationSetBy = Automatic
+
+	column dta_12hr_plus_mean
+		dataType: string
+		lineageTag: eaf0f8bf-2bf5-488c-8590-711ea96b3ace
+		summarizeBy: none
+		sourceColumn: dta_12hr_plus_mean
+
+		annotation SummarizationSetBy = Automatic
+
+	column dta_12hr_plus_lpl
+		dataType: string
+		lineageTag: 1a830702-fc05-4560-b028-d216d4697560
+		summarizeBy: none
+		sourceColumn: dta_12hr_plus_lpl
+
+		annotation SummarizationSetBy = Automatic
+
+	column dta_12hr_plus_upl
+		dataType: string
+		lineageTag: 3e4ab739-5e17-4998-a8ae-5fb7d35f03e1
+		summarizeBy: none
+		sourceColumn: dta_12hr_plus_upl
+
+		annotation SummarizationSetBy = Automatic
+
+	column dta_12hr_plus_special_6m
+		dataType: string
+		lineageTag: 5ec3ec3e-7fbf-4547-a887-c2a3bb9c7731
+		summarizeBy: none
+		sourceColumn: dta_12hr_plus_special_6m
+
+		annotation SummarizationSetBy = Automatic
+
+	column attendances_latest
+		dataType: string
+		lineageTag: 5b86e709-3c26-4b52-a75d-f441febbb8ea
+		summarizeBy: none
+		sourceColumn: attendances_latest
+
+		annotation SummarizationSetBy = Automatic
+
+	column attendances_mean
+		dataType: string
+		lineageTag: 20038e2f-018d-4a58-9ed2-89a894a5ac7f
+		summarizeBy: none
+		sourceColumn: attendances_mean
+
+		annotation SummarizationSetBy = Automatic
+
+	column attendances_lpl
+		dataType: string
+		lineageTag: d8d61f6f-98e2-4c57-856c-d732bdb4d5d7
+		summarizeBy: none
+		sourceColumn: attendances_lpl
+
+		annotation SummarizationSetBy = Automatic
+
+	column attendances_upl
+		dataType: string
+		lineageTag: f1a2ed9b-47c7-4d88-b985-75ba382f66f1
+		summarizeBy: none
+		sourceColumn: attendances_upl
+
+		annotation SummarizationSetBy = Automatic
+
+	column attendances_variation
+		dataType: string
+		lineageTag: fa0c46dc-4a49-4262-ad6e-b9cac9d45b94
+		summarizeBy: none
+		sourceColumn: attendances_variation
+
+		annotation SummarizationSetBy = Automatic
+
+	column attendances_special_6m
+		dataType: string
+		lineageTag: ae9b05d6-aa44-42d1-be57-ed90d7c932e6
+		summarizeBy: none
+		sourceColumn: attendances_special_6m
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Entities = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(
+				        Web.Contents(BaseUrl, [RelativePath = "spc_summary.csv"]),
+				        [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]
+				    ),
+				    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+				    // empty cells and R's NA arrive as text and would fail the type change: make them null
+				    #"Blanks to Null" = Table.TransformColumns(#"Promoted Headers", {}, each if _ = "" or _ = "NA" then null else _),
+				    #"Changed Types" = Table.TransformColumnTypes(
+				        #"Blanks to Null",
+				        {
+				            {"level", type text},
+				            {"code", type text},
+				            {"name", type text},
+				            {"region", type text},
+				            {"pct_4hr_variation", type text},
+				            {"pct_4hr_special_6m", Int64.Type},
+				            {"pct_4hr_assurance", type text},
+				            {"pct_4hr_mean", type number},
+				            {"pct_4hr_lpl", type number},
+				            {"pct_4hr_upl", type number},
+				            {"dta_12hr_plus_variation", type text}
+				        },
+				        "en-US"
+				    ),
+				    #"Filtered Rows" = #"Changed Types",
+				    #"Variation" = Table.AddColumn(#"Filtered Rows", "Variation", each
+				        if [pct_4hr_variation] = "improvement" then "Special cause: improving"
+				        else if [pct_4hr_variation] = "concern" then "Special cause: concern"
+				        else "Common cause", type text),
+				    #"Assurance" = Table.AddColumn(#"Variation", "Assurance", each
+				        if [pct_4hr_assurance] = "pass" then "Will consistently meet 82%"
+				        else if [pct_4hr_assurance] = "fail" then "Will consistently miss 82%"
+				        else "Hit and miss", type text),
+				    #"Level Order" = Table.AddColumn(#"Assurance", "Level Order", each
+				        if [level] = "England" then 1 else if [level] = "Region" then 2 else 3, Int64.Type),
+				    Result = #"Level Order"
+				in
+				    Result
+

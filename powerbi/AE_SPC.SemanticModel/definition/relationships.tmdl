@@ -1,0 +1,13 @@
+relationship d0463765-21ed-5fc1-98ae-3841fcf0bdf7
+	fromColumn: Monthly.code
+	toColumn: Entities.code
+
+relationship f0f85fc9-a285-5665-9540-9b51ce1b543d
+	fromColumn: Monthly.month_start
+	toColumn: Calendar.month_start
+
+relationship 14e981c0-5aa6-40c0-b60a-f771f36251f9
+	joinOnDateBehavior: datePartOnly
+	fromColumn: Calendar.month_start
+	toColumn: LocalDateTable_9cb889e0-8cb6-4c97-a9bb-1e83596150ed.Date
+

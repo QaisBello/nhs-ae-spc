@@ -1,0 +1,6 @@
+/// Folder of cleaned CSVs from this repo (data/clean). Point it at a local folder or another branch to test.
+expression BaseUrl = "https://raw.githubusercontent.com/QaisBello/nhs-ae-spc/main/data/clean/" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: 2fa53fff-20c3-495c-8265-d0f65b943931
+
+	annotation PBI_ResultType = Text
+

@@ -1,0 +1,282 @@
+/// One row per entity per month, 2020 onwards. England and regions count every A&E type; trusts are their Type 1 (major) departments, as in the SPC summary. Combined in Power Query from three CSVs.
+table Monthly
+	lineageTag: 27751259-7eb5-47f6-93a7-41363de39a29
+
+	/// The trust, region or England in context; England when nothing (or more than one) is selected.
+	measure 'Selected Code' = SELECTEDVALUE ( Entities[code], "ENG" )
+		formatString: General
+		displayFolder: Selection
+		lineageTag: 2a4d951e-612f-451b-a77c-61c1ef1cb382
+
+	/// Name of the entity in context, for titles.
+	measure 'Selected Name' = LOOKUPVALUE ( Entities[name], Entities[code], [Selected Code] )
+		formatString: General
+		displayFolder: Selection
+		lineageTag: 24f3e8a6-1061-4fe2-ba7d-c7424a35569a
+
+	/// A&E attendances (England and regions: all types; trusts: Type 1).
+	measure 'A&E Attendances' =
+			VAR _code = [Selected Code]
+			RETURN CALCULATE ( SUM ( Monthly[attendances] ), REMOVEFILTERS ( Entities ), Entities[code] = _code )
+		formatString: #,0
+		displayFolder: Activity
+		lineageTag: d702dfba-d83a-469a-b8b2-677d309f5b63
+
+	/// Attendances that took more than 4 hours from arrival to admission, transfer or discharge.
+	measure 'Waited Over 4 Hours' =
+			VAR _code = [Selected Code]
+			RETURN CALCULATE ( SUM ( Monthly[over_4hrs] ), REMOVEFILTERS ( Entities ), Entities[code] = _code )
+		formatString: #,0
+		displayFolder: Activity
+		lineageTag: a1877bd6-25b6-417a-b2dc-c0bbc2c59cb0
+
+	/// Share of attendances seen within 4 hours.
+	measure '% Within 4 Hours' = DIVIDE ( [A&E Attendances] - [Waited Over 4 Hours], [A&E Attendances] )
+		formatString: 0.0%
+		displayFolder: Performance
+		lineageTag: fdd84a3e-8341-4cea-8634-2222b39f55ed
+
+	/// Patients waiting more than 12 hours from decision to admit to admission.
+	measure 'Waits Over 12 Hours' =
+			VAR _code = [Selected Code]
+			RETURN CALCULATE ( SUM ( Monthly[dta_12hr_plus] ), REMOVEFILTERS ( Entities ), Entities[code] = _code )
+		formatString: #,0
+		displayFolder: Activity
+		lineageTag: 827c34db-2301-48a0-b66a-e5b4066e3c69
+
+	/// The 4-hour standard used for assurance in this project.
+	measure '4-Hour Standard' = 0.82
+		formatString: 0%
+		displayFolder: Performance
+		lineageTag: 480ad282-0278-4f96-b666-aac722609940
+
+	/// Latest month in the data.
+	measure 'Latest Month' =
+			VAR _last = CALCULATE ( MAX ( 'Calendar'[Month Index] ), REMOVEFILTERS ( 'Calendar' ) )
+			RETURN CALCULATE ( MAX ( 'Calendar'[Month Name] ), REMOVEFILTERS ( 'Calendar' ), 'Calendar'[Month Index] = _last )
+		formatString: General
+		displayFolder: Performance
+		lineageTag: ab3e7118-769d-4950-aa32-1980d10f8ada
+
+	/// Performance in the latest month.
+	measure 'Latest % Within 4 Hours' =
+			VAR _last = CALCULATE ( MAX ( 'Calendar'[Month Index] ), REMOVEFILTERS ( 'Calendar' ) )
+			RETURN CALCULATE ( [% Within 4 Hours], REMOVEFILTERS ( 'Calendar' ), 'Calendar'[Month Index] = _last )
+		formatString: 0.0%
+		displayFolder: Performance
+		lineageTag: 0bbde45b-c703-4c1b-a712-e606f54bc707
+
+	/// Centre line: mean of the last 24 months. Blank outside the window so the chart draws it only there.
+	measure 'SPC Mean' =
+			VAR _months =
+			    CALCULATETABLE ( VALUES ( 'Calendar'[Month Index] ), REMOVEFILTERS ( 'Calendar' ), 'Calendar'[In SPC Window] = 1 )
+			VAR _points =
+			    ADDCOLUMNS (
+			        _months,
+			        "@v",
+			            VAR _i = 'Calendar'[Month Index]
+			            RETURN CALCULATE ( [% Within 4 Hours], REMOVEFILTERS ( 'Calendar' ), 'Calendar'[Month Index] = _i )
+			    )
+			VAR _mean = AVERAGEX ( _points, [@v] )
+			RETURN
+			    IF ( MAX ( 'Calendar'[In SPC Window] ) = 1, _mean )
+		formatString: 0.0%
+		displayFolder: SPC
+		lineageTag: 49dbaad8-1348-4284-913d-612cd5d34088
+
+	/// Average month-to-month change. Moving ranges of 3.267 x the average or more are screened out and the average recalculated, as in Making Data Count.
+	measure 'SPC Average Moving Range' =
+			VAR _months =
+			    CALCULATETABLE ( VALUES ( 'Calendar'[Month Index] ), REMOVEFILTERS ( 'Calendar' ), 'Calendar'[In SPC Window] = 1 )
+			VAR _points =
+			    ADDCOLUMNS (
+			        _months,
+			        "@v",
+			            VAR _i = 'Calendar'[Month Index]
+			            RETURN CALCULATE ( [% Within 4 Hours], REMOVEFILTERS ( 'Calendar' ), 'Calendar'[Month Index] = _i )
+			    )
+			VAR _first = MINX ( _points, 'Calendar'[Month Index] )
+			VAR _ranges =
+			    ADDCOLUMNS (
+			        FILTER ( _points, 'Calendar'[Month Index] > _first ),
+			        "@mr",
+			            VAR _i = 'Calendar'[Month Index]
+			            RETURN ABS ( [@v] - MAXX ( FILTER ( _points, 'Calendar'[Month Index] = _i - 1 ), [@v] ) )
+			    )
+			VAR _amr = AVERAGEX ( _ranges, [@mr] )
+			VAR _screened = AVERAGEX ( FILTER ( _ranges, [@mr] < 3.267 * _amr ), [@mr] )
+			RETURN
+			    IF ( MAX ( 'Calendar'[In SPC Window] ) = 1, COALESCE ( _screened, _amr ) )
+		formatString: 0.00%
+		displayFolder: SPC
+		lineageTag: c3f5817a-0502-4fff-a58e-c6457e240b2c
+
+	/// Upper process limit: mean + 2.66 x average moving range.
+	measure 'SPC Upper Limit' = [SPC Mean] + 2.66 * [SPC Average Moving Range]
+		formatString: 0.0%
+		displayFolder: SPC
+		lineageTag: e9d259d4-873a-4786-96a4-152df9d8fd30
+
+	/// Lower process limit: mean - 2.66 x average moving range.
+	measure 'SPC Lower Limit' = [SPC Mean] - 2.66 * [SPC Average Moving Range]
+		formatString: 0.0%
+		displayFolder: SPC
+		lineageTag: e9d70406-f425-4136-929d-20fa87902390
+
+	/// Where the standard sits against the DAX process limits. Should agree with the Python assurance.
+	measure 'Assurance (DAX)' =
+			VAR _upl = [SPC Upper Limit]
+			VAR _lpl = [SPC Lower Limit]
+			RETURN
+			    SWITCH (
+			        TRUE (),
+			        ISBLANK ( _upl ), BLANK (),
+			        [4-Hour Standard] > _upl, "Will consistently miss",
+			        [4-Hour Standard] < _lpl, "Will consistently meet",
+			        "Hit and miss"
+			    )
+		formatString: General
+		displayFolder: SPC
+		lineageTag: 2da0e2f4-01ae-460f-878d-e83cf630b4bf
+
+	/// Latest-month variation from the Python SPC rules (single point, trend, two-of-three, shift).
+	measure 'Latest Variation' = LOOKUPVALUE ( Entities[Variation], Entities[code], [Selected Code] )
+		formatString: General
+		displayFolder: SPC
+		lineageTag: ad352e6a-dff4-411e-a90f-42fc9c3e2f0c
+
+	/// Assurance against the standard from the Python SPC rules.
+	measure 'Assurance Rating' = LOOKUPVALUE ( Entities[Assurance], Entities[code], [Selected Code] )
+		formatString: General
+		displayFolder: SPC
+		lineageTag: 4c86fd1f-3528-4c88-99f8-3d1c198afcfb
+
+	/// Latest performance, trusts only (blank for England and regions, so tables list trusts).
+	measure 'Trust Latest %' = IF ( SELECTEDVALUE ( Entities[level] ) = "Trust", [Latest % Within 4 Hours] )
+		formatString: 0.0%
+		displayFolder: Trusts
+		lineageTag: 0c2d05ed-0a0e-494f-8c11-f4f16fa7af89
+
+	/// SPC centre line, trusts only.
+	measure 'Trust SPC Mean' = IF ( SELECTEDVALUE ( Entities[level] ) = "Trust", CALCULATE ( [SPC Mean], REMOVEFILTERS ( 'Calendar' ) ) )
+		formatString: 0.0%
+		displayFolder: Trusts
+		lineageTag: 3a24c8a2-6eba-4bb5-bc59-c343505d7e6f
+
+	/// Lower process limit, trusts only.
+	measure 'Trust Lower Limit' = IF ( SELECTEDVALUE ( Entities[level] ) = "Trust", CALCULATE ( [SPC Lower Limit], REMOVEFILTERS ( 'Calendar' ) ) )
+		formatString: 0.0%
+		displayFolder: Trusts
+		lineageTag: dc81ed05-56c1-4641-a3b4-57fa855bb3df
+
+	/// Upper process limit, trusts only.
+	measure 'Trust Upper Limit' = IF ( SELECTEDVALUE ( Entities[level] ) = "Trust", CALCULATE ( [SPC Upper Limit], REMOVEFILTERS ( 'Calendar' ) ) )
+		formatString: 0.0%
+		displayFolder: Trusts
+		lineageTag: a9d31b29-e0e8-4d8d-a412-56219ce529d3
+
+	/// Latest performance, regions only.
+	measure 'Region Latest %' = IF ( SELECTEDVALUE ( Entities[level] ) = "Region", [Latest % Within 4 Hours] )
+		formatString: 0.0%
+		displayFolder: Trusts
+		lineageTag: a8e4d156-b119-4fc9-ac7b-31ce3d171623
+
+	/// Trusts whose process limits sit wholly below the standard.
+	measure 'Trusts Consistently Missing' = COUNTROWS ( FILTER ( ALL ( Entities ), Entities[level] = "Trust" && Entities[pct_4hr_assurance] = "fail" ) )
+		formatString: #,0
+		displayFolder: Trusts
+		lineageTag: 045ca929-f2b2-4d4c-8ff1-4130fd2237b4
+
+	/// Trusts showing special cause improvement in the latest month.
+	measure 'Trusts Improving' = COUNTROWS ( FILTER ( ALL ( Entities ), Entities[level] = "Trust" && Entities[pct_4hr_variation] = "improvement" ) )
+		formatString: #,0
+		displayFolder: Trusts
+		lineageTag: f0f7f373-2e81-445d-a7a1-e4a1440c9262
+
+	/// Trusts showing special cause concern in the latest month.
+	measure 'Trusts of Concern' = COUNTROWS ( FILTER ( ALL ( Entities ), Entities[level] = "Trust" && Entities[pct_4hr_variation] = "concern" ) )
+		formatString: #,0
+		displayFolder: Trusts
+		lineageTag: 4d96404a-eaf3-4da1-a244-f92877589042
+
+	column code
+		dataType: string
+		isHidden
+		lineageTag: 4c9031c0-7e54-4fe2-aa7a-d7df7ea6c69d
+		summarizeBy: none
+		sourceColumn: code
+
+	column month
+		dataType: string
+		isHidden
+		lineageTag: dbab0c89-3ae9-4509-b485-824d0eb35b1e
+		summarizeBy: none
+		sourceColumn: month
+
+	column attendances
+		dataType: int64
+		formatString: #,0
+		lineageTag: dea92d82-e498-44e9-b06c-6698cc449557
+		summarizeBy: none
+		sourceColumn: attendances
+
+	column over_4hrs
+		dataType: int64
+		formatString: #,0
+		lineageTag: c2231d3e-1285-4f11-aa28-23f142643061
+		summarizeBy: none
+		sourceColumn: over_4hrs
+
+	column type1_attendances
+		dataType: int64
+		formatString: #,0
+		lineageTag: 66cd08e7-424f-4e64-85ba-f653d98da2d5
+		summarizeBy: none
+		sourceColumn: type1_attendances
+
+	column type1_over_4hrs
+		dataType: int64
+		formatString: #,0
+		lineageTag: 1171b6f6-51ae-44d0-bfdd-0c17bbe7f4f5
+		summarizeBy: none
+		sourceColumn: type1_over_4hrs
+
+	column dta_12hr_plus
+		dataType: int64
+		formatString: #,0
+		lineageTag: 62402307-adfa-4471-86d0-88b38fd342fe
+		summarizeBy: none
+		sourceColumn: dta_12hr_plus
+
+	column month_start
+		dataType: dateTime
+		isHidden
+		formatString: mmm yyyy
+		lineageTag: f12e6adb-f7d9-49ca-886f-8464f599cafc
+		summarizeBy: none
+		sourceColumn: month_start
+
+	partition Monthly = m
+		mode: import
+		source =
+				let
+				    Read = (file as text) as table =>
+				        Table.PromoteHeaders(
+				            Csv.Document(Web.Contents(BaseUrl, [RelativePath = file]), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				            [PromoteAllScalars = true]),
+				    England = Table.AddColumn(Read("england.csv"), "code", each "ENG", type text),
+				    Regions = Table.RenameColumns(Read("regions.csv"), {{"region", "code"}}),
+				    Trusts = Table.RenameColumns(
+				        Table.SelectRows(Read("ae_monthly.csv"), each [provider_type] = "Major A&E (Type 1)"),
+				        {{"org_code", "code"}}),
+				    Keep = {"code", "month", "attendances", "over_4hrs", "type1_attendances", "type1_over_4hrs", "dta_12hr_plus"},
+				    Combined = Table.Combine({
+				        Table.SelectColumns(England, Keep), Table.SelectColumns(Regions, Keep), Table.SelectColumns(Trusts, Keep)}),
+				    Typed = Table.TransformColumnTypes(Combined, {
+				        {"code", type text}, {"month", type text}, {"attendances", Int64.Type}, {"over_4hrs", Int64.Type},
+				        {"type1_attendances", Int64.Type}, {"type1_over_4hrs", Int64.Type}, {"dta_12hr_plus", Int64.Type}}, "en-US"),
+				    Result = Table.AddColumn(Typed, "month_start", each #datetime(
+				        Number.FromText(Text.Start([month], 4)), Number.FromText(Text.End([month], 2)), 1, 0, 0, 0), type datetime)
+				in
+				    Result
+

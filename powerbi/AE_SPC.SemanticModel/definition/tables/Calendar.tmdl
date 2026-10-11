@@ -1,0 +1,70 @@
+/// One row per month. Month Index counts months from January 2020; In SPC Window = 1 for the last 24 months, the baseline for the process limits.
+table Calendar
+	lineageTag: 43b43cc9-3d92-4dc7-8f23-447343dc61b8
+
+	column month
+		dataType: string
+		isHidden
+		lineageTag: 3ffb170c-afbf-436e-85bc-0fa4d4cd3438
+		summarizeBy: none
+		sourceColumn: month
+
+	column 'Month Index'
+		dataType: int64
+		isHidden
+		formatString: #,0
+		lineageTag: 15a152f0-a7e2-44aa-881a-98ec109f1c67
+		summarizeBy: sum
+		sourceColumn: Month Index
+
+		annotation SummarizationSetBy = Automatic
+
+	column month_start
+		dataType: dateTime
+		isKey
+		formatString: mmm yyyy
+		lineageTag: c54e0f6c-8edc-48b1-8f8b-68a7a61805d8
+		summarizeBy: none
+		sourceColumn: month_start
+
+		variation Variation
+			isDefault
+			relationship: 14e981c0-5aa6-40c0-b60a-f771f36251f9
+			defaultHierarchy: LocalDateTable_9cb889e0-8cb6-4c97-a9bb-1e83596150ed.'Date Hierarchy'
+
+	column 'In SPC Window'
+		dataType: int64
+		isHidden
+		formatString: #,0
+		lineageTag: 5ccc5223-47f5-42a6-a321-2280be30698c
+		summarizeBy: sum
+		sourceColumn: In SPC Window
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Month Name'
+		dataType: string
+		lineageTag: 339ff3d1-f968-4054-ab39-f37bf5e56bbb
+		summarizeBy: none
+		sourceColumn: Month Name
+		sortByColumn: 'Month Index'
+
+	partition Calendar = m
+		mode: import
+		source =
+				let
+				    Read = (file as text) as table =>
+				        Table.PromoteHeaders(
+				            Csv.Document(Web.Contents(BaseUrl, [RelativePath = file]), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				            [PromoteAllScalars = true]),
+				    Months = Table.SelectColumns(Read("england.csv"), {"month"}),
+				    Sorted = Table.Sort(Months, {{"month", Order.Ascending}}),
+				    Indexed = Table.AddIndexColumn(Sorted, "Month Index", 0, 1, Int64.Type),
+				    Last = List.Max(Indexed[Month Index]),
+				    WithStart = Table.AddColumn(Indexed, "month_start", each #datetime(
+				        Number.FromText(Text.Start([month], 4)), Number.FromText(Text.End([month], 2)), 1, 0, 0, 0), type datetime),
+				    Window = Table.AddColumn(WithStart, "In SPC Window", each if [Month Index] > Last - 24 then 1 else 0, Int64.Type),
+				    Result = Table.AddColumn(Window, "Month Name", each Date.ToText(Date.From([month_start]), "MMM yyyy", "en-GB"), type text)
+				in
+				    Result
+

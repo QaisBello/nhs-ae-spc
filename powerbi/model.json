@@ -1,0 +1,526 @@
+{
+  "tables": [
+    {
+      "name": "Entities",
+      "description": "England, the 7 regions and the 120 trusts with a Type 1 department in every month of the SPC window (spc_summary.csv). Variation and assurance come from the Python SPC rules (src/spc.py).",
+      "columns": [
+        {
+          "name": "level",
+          "type": "string",
+          "hidden": false,
+          "key": false
+        },
+        {
+          "name": "code",
+          "type": "string",
+          "hidden": false,
+          "key": true
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "hidden": false,
+          "key": false
+        },
+        {
+          "name": "region",
+          "type": "string",
+          "hidden": false,
+          "key": false
+        },
+        {
+          "name": "pct_4hr_variation",
+          "type": "string",
+          "hidden": true,
+          "key": false
+        },
+        {
+          "name": "pct_4hr_special_6m",
+          "type": "int64",
+          "hidden": false,
+          "key": false
+        },
+        {
+          "name": "pct_4hr_assurance",
+          "type": "string",
+          "hidden": true,
+          "key": false
+        },
+        {
+          "name": "pct_4hr_mean",
+          "type": "double",
+          "hidden": true,
+          "key": false
+        },
+        {
+          "name": "pct_4hr_lpl",
+          "type": "double",
+          "hidden": true,
+          "key": false
+        },
+        {
+          "name": "pct_4hr_upl",
+          "type": "double",
+          "hidden": true,
+          "key": false
+        },
+        {
+          "name": "dta_12hr_plus_variation",
+          "type": "string",
+          "hidden": true,
+          "key": false
+        },
+        {
+          "name": "Variation",
+          "type": "string",
+          "hidden": false,
+          "key": false
+        },
+        {
+          "name": "Assurance",
+          "type": "string",
+          "hidden": false,
+          "key": false
+        },
+        {
+          "name": "Level Order",
+          "type": "int64",
+          "hidden": true,
+          "key": false
+        }
+      ]
+    },
+    {
+      "name": "Monthly",
+      "description": "One row per entity per month, 2020 onwards. England and regions count every A&E type; trusts are their Type 1 (major) departments, as in the SPC summary. Combined in Power Query from three CSVs.",
+      "columns": [
+        {
+          "name": "code",
+          "type": "string",
+          "hidden": true,
+          "key": false
+        },
+        {
+          "name": "month",
+          "type": "string",
+          "hidden": true,
+          "key": false
+        },
+        {
+          "name": "attendances",
+          "type": "int64",
+          "hidden": false,
+          "key": false
+        },
+        {
+          "name": "over_4hrs",
+          "type": "int64",
+          "hidden": false,
+          "key": false
+        },
+        {
+          "name": "type1_attendances",
+          "type": "int64",
+          "hidden": false,
+          "key": false
+        },
+        {
+          "name": "type1_over_4hrs",
+          "type": "int64",
+          "hidden": false,
+          "key": false
+        },
+        {
+          "name": "dta_12hr_plus",
+          "type": "int64",
+          "hidden": false,
+          "key": false
+        },
+        {
+          "name": "month_start",
+          "type": "dateTime",
+          "hidden": true,
+          "key": false
+        }
+      ]
+    },
+    {
+      "name": "Calendar",
+      "description": "One row per month. Month Index counts months from January 2020; In SPC Window = 1 for the last 24 months, the baseline for the process limits.",
+      "columns": [
+        {
+          "name": "month",
+          "type": "string",
+          "hidden": true,
+          "key": false
+        },
+        {
+          "name": "Month Index",
+          "type": "int64",
+          "hidden": true,
+          "key": false
+        },
+        {
+          "name": "month_start",
+          "type": "dateTime",
+          "hidden": false,
+          "key": true
+        },
+        {
+          "name": "In SPC Window",
+          "type": "int64",
+          "hidden": true,
+          "key": false
+        },
+        {
+          "name": "Month Name",
+          "type": "string",
+          "hidden": false,
+          "key": false
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "fromTable": "Monthly",
+      "fromColumn": "code",
+      "toTable": "Entities",
+      "toColumn": "code",
+      "both": false
+    },
+    {
+      "fromTable": "Monthly",
+      "fromColumn": "month_start",
+      "toTable": "Calendar",
+      "toColumn": "month_start",
+      "both": false
+    }
+  ],
+  "measures": [
+    {
+      "name": "Selected Code",
+      "table": "Monthly",
+      "folder": "Selection",
+      "format": "General",
+      "dax": "SELECTEDVALUE ( Entities[code], \"ENG\" )",
+      "description": "The trust, region or England in context; England when nothing (or more than one) is selected."
+    },
+    {
+      "name": "Selected Name",
+      "table": "Monthly",
+      "folder": "Selection",
+      "format": "General",
+      "dax": "LOOKUPVALUE ( Entities[name], Entities[code], [Selected Code] )",
+      "description": "Name of the entity in context, for titles."
+    },
+    {
+      "name": "A&E Attendances",
+      "table": "Monthly",
+      "folder": "Activity",
+      "format": "#,0",
+      "dax": "VAR _code = [Selected Code]\nRETURN CALCULATE ( SUM ( Monthly[attendances] ), REMOVEFILTERS ( Entities ), Entities[code] = _code )",
+      "description": "A&E attendances (England and regions: all types; trusts: Type 1)."
+    },
+    {
+      "name": "Waited Over 4 Hours",
+      "table": "Monthly",
+      "folder": "Activity",
+      "format": "#,0",
+      "dax": "VAR _code = [Selected Code]\nRETURN CALCULATE ( SUM ( Monthly[over_4hrs] ), REMOVEFILTERS ( Entities ), Entities[code] = _code )",
+      "description": "Attendances that took more than 4 hours from arrival to admission, transfer or discharge."
+    },
+    {
+      "name": "% Within 4 Hours",
+      "table": "Monthly",
+      "folder": "Performance",
+      "format": "0.0%",
+      "dax": "DIVIDE ( [A&E Attendances] - [Waited Over 4 Hours], [A&E Attendances] )",
+      "description": "Share of attendances seen within 4 hours."
+    },
+    {
+      "name": "Waits Over 12 Hours",
+      "table": "Monthly",
+      "folder": "Activity",
+      "format": "#,0",
+      "dax": "VAR _code = [Selected Code]\nRETURN CALCULATE ( SUM ( Monthly[dta_12hr_plus] ), REMOVEFILTERS ( Entities ), Entities[code] = _code )",
+      "description": "Patients waiting more than 12 hours from decision to admit to admission."
+    },
+    {
+      "name": "4-Hour Standard",
+      "table": "Monthly",
+      "folder": "Performance",
+      "format": "0%",
+      "dax": "0.82",
+      "description": "The 4-hour standard used for assurance in this project."
+    },
+    {
+      "name": "Latest Month",
+      "table": "Monthly",
+      "folder": "Performance",
+      "format": "General",
+      "dax": "VAR _last = CALCULATE ( MAX ( 'Calendar'[Month Index] ), REMOVEFILTERS ( 'Calendar' ) )\nRETURN CALCULATE ( MAX ( 'Calendar'[Month Name] ), REMOVEFILTERS ( 'Calendar' ), 'Calendar'[Month Index] = _last )",
+      "description": "Latest month in the data."
+    },
+    {
+      "name": "Latest % Within 4 Hours",
+      "table": "Monthly",
+      "folder": "Performance",
+      "format": "0.0%",
+      "dax": "VAR _last = CALCULATE ( MAX ( 'Calendar'[Month Index] ), REMOVEFILTERS ( 'Calendar' ) )\nRETURN CALCULATE ( [% Within 4 Hours], REMOVEFILTERS ( 'Calendar' ), 'Calendar'[Month Index] = _last )",
+      "description": "Performance in the latest month."
+    },
+    {
+      "name": "SPC Mean",
+      "table": "Monthly",
+      "folder": "SPC",
+      "format": "0.0%",
+      "dax": "VAR _months =\n    CALCULATETABLE ( VALUES ( 'Calendar'[Month Index] ), REMOVEFILTERS ( 'Calendar' ), 'Calendar'[In SPC Window] = 1 )\nVAR _points =\n    ADDCOLUMNS (\n        _months,\n        \"@v\",\n            VAR _i = 'Calendar'[Month Index]\n            RETURN CALCULATE ( [% Within 4 Hours], REMOVEFILTERS ( 'Calendar' ), 'Calendar'[Month Index] = _i )\n    )\nVAR _mean = AVERAGEX ( _points, [@v] )\nRETURN\n    IF ( MAX ( 'Calendar'[In SPC Window] ) = 1, _mean )",
+      "description": "Centre line: mean of the last 24 months. Blank outside the window so the chart draws it only there."
+    },
+    {
+      "name": "SPC Average Moving Range",
+      "table": "Monthly",
+      "folder": "SPC",
+      "format": "0.00%",
+      "dax": "VAR _months =\n    CALCULATETABLE ( VALUES ( 'Calendar'[Month Index] ), REMOVEFILTERS ( 'Calendar' ), 'Calendar'[In SPC Window] = 1 )\nVAR _points =\n    ADDCOLUMNS (\n        _months,\n        \"@v\",\n            VAR _i = 'Calendar'[Month Index]\n            RETURN CALCULATE ( [% Within 4 Hours], REMOVEFILTERS ( 'Calendar' ), 'Calendar'[Month Index] = _i )\n    )\nVAR _first = MINX ( _points, 'Calendar'[Month Index] )\nVAR _ranges =\n    ADDCOLUMNS (\n        FILTER ( _points, 'Calendar'[Month Index] > _first ),\n        \"@mr\",\n            VAR _i = 'Calendar'[Month Index]\n            RETURN ABS ( [@v] - MAXX ( FILTER ( _points, 'Calendar'[Month Index] = _i - 1 ), [@v] ) )\n    )\nVAR _amr = AVERAGEX ( _ranges, [@mr] )\nVAR _screened = AVERAGEX ( FILTER ( _ranges, [@mr] < 3.267 * _amr ), [@mr] )\nRETURN\n    IF ( MAX ( 'Calendar'[In SPC Window] ) = 1, COALESCE ( _screened, _amr ) )",
+      "description": "Average month-to-month change. Moving ranges of 3.267 x the average or more are screened out and the average recalculated, as in Making Data Count."
+    },
+    {
+      "name": "SPC Upper Limit",
+      "table": "Monthly",
+      "folder": "SPC",
+      "format": "0.0%",
+      "dax": "[SPC Mean] + 2.66 * [SPC Average Moving Range]",
+      "description": "Upper process limit: mean + 2.66 x average moving range."
+    },
+    {
+      "name": "SPC Lower Limit",
+      "table": "Monthly",
+      "folder": "SPC",
+      "format": "0.0%",
+      "dax": "[SPC Mean] - 2.66 * [SPC Average Moving Range]",
+      "description": "Lower process limit: mean - 2.66 x average moving range."
+    },
+    {
+      "name": "Assurance (DAX)",
+      "table": "Monthly",
+      "folder": "SPC",
+      "format": "General",
+      "dax": "VAR _upl = [SPC Upper Limit]\nVAR _lpl = [SPC Lower Limit]\nRETURN\n    SWITCH (\n        TRUE (),\n        ISBLANK ( _upl ), BLANK (),\n        [4-Hour Standard] > _upl, \"Will consistently miss\",\n        [4-Hour Standard] < _lpl, \"Will consistently meet\",\n        \"Hit and miss\"\n    )",
+      "description": "Where the standard sits against the DAX process limits. Should agree with the Python assurance."
+    },
+    {
+      "name": "Latest Variation",
+      "table": "Monthly",
+      "folder": "SPC",
+      "format": "General",
+      "dax": "LOOKUPVALUE ( Entities[Variation], Entities[code], [Selected Code] )",
+      "description": "Latest-month variation from the Python SPC rules (single point, trend, two-of-three, shift)."
+    },
+    {
+      "name": "Assurance Rating",
+      "table": "Monthly",
+      "folder": "SPC",
+      "format": "General",
+      "dax": "LOOKUPVALUE ( Entities[Assurance], Entities[code], [Selected Code] )",
+      "description": "Assurance against the standard from the Python SPC rules."
+    },
+    {
+      "name": "Trust Latest %",
+      "table": "Monthly",
+      "folder": "Trusts",
+      "format": "0.0%",
+      "dax": "IF ( SELECTEDVALUE ( Entities[level] ) = \"Trust\", [Latest % Within 4 Hours] )",
+      "description": "Latest performance, trusts only (blank for England and regions, so tables list trusts)."
+    },
+    {
+      "name": "Trust SPC Mean",
+      "table": "Monthly",
+      "folder": "Trusts",
+      "format": "0.0%",
+      "dax": "IF ( SELECTEDVALUE ( Entities[level] ) = \"Trust\", CALCULATE ( [SPC Mean], REMOVEFILTERS ( 'Calendar' ) ) )",
+      "description": "SPC centre line, trusts only."
+    },
+    {
+      "name": "Trust Lower Limit",
+      "table": "Monthly",
+      "folder": "Trusts",
+      "format": "0.0%",
+      "dax": "IF ( SELECTEDVALUE ( Entities[level] ) = \"Trust\", CALCULATE ( [SPC Lower Limit], REMOVEFILTERS ( 'Calendar' ) ) )",
+      "description": "Lower process limit, trusts only."
+    },
+    {
+      "name": "Trust Upper Limit",
+      "table": "Monthly",
+      "folder": "Trusts",
+      "format": "0.0%",
+      "dax": "IF ( SELECTEDVALUE ( Entities[level] ) = \"Trust\", CALCULATE ( [SPC Upper Limit], REMOVEFILTERS ( 'Calendar' ) ) )",
+      "description": "Upper process limit, trusts only."
+    },
+    {
+      "name": "Region Latest %",
+      "table": "Monthly",
+      "folder": "Trusts",
+      "format": "0.0%",
+      "dax": "IF ( SELECTEDVALUE ( Entities[level] ) = \"Region\", [Latest % Within 4 Hours] )",
+      "description": "Latest performance, regions only."
+    },
+    {
+      "name": "Trusts Consistently Missing",
+      "table": "Monthly",
+      "folder": "Trusts",
+      "format": "#,0",
+      "dax": "COUNTROWS ( FILTER ( ALL ( Entities ), Entities[level] = \"Trust\" && Entities[pct_4hr_assurance] = \"fail\" ) )",
+      "description": "Trusts whose process limits sit wholly below the standard."
+    },
+    {
+      "name": "Trusts Improving",
+      "table": "Monthly",
+      "folder": "Trusts",
+      "format": "#,0",
+      "dax": "COUNTROWS ( FILTER ( ALL ( Entities ), Entities[level] = \"Trust\" && Entities[pct_4hr_variation] = \"improvement\" ) )",
+      "description": "Trusts showing special cause improvement in the latest month."
+    },
+    {
+      "name": "Trusts of Concern",
+      "table": "Monthly",
+      "folder": "Trusts",
+      "format": "#,0",
+      "dax": "COUNTROWS ( FILTER ( ALL ( Entities ), Entities[level] = \"Trust\" && Entities[pct_4hr_variation] = \"concern\" ) )",
+      "description": "Trusts showing special cause concern in the latest month."
+    }
+  ],
+  "pages": [
+    {
+      "page": "SPC chart",
+      "visuals": [
+        {
+          "type": "textbox",
+          "x": 24,
+          "y": 12,
+          "width": 860,
+          "height": 52
+        },
+        {
+          "type": "slicer",
+          "x": 900,
+          "y": 8,
+          "width": 356,
+          "height": 64
+        },
+        {
+          "type": "card",
+          "x": 24,
+          "y": 76,
+          "width": 236,
+          "height": 96
+        },
+        {
+          "type": "card",
+          "x": 272,
+          "y": 76,
+          "width": 236,
+          "height": 96
+        },
+        {
+          "type": "card",
+          "x": 520,
+          "y": 76,
+          "width": 236,
+          "height": 96
+        },
+        {
+          "type": "card",
+          "x": 768,
+          "y": 76,
+          "width": 236,
+          "height": 96
+        },
+        {
+          "type": "card",
+          "x": 1016,
+          "y": 76,
+          "width": 240,
+          "height": 96
+        },
+        {
+          "type": "lineChart",
+          "x": 24,
+          "y": 184,
+          "width": 1232,
+          "height": 340
+        },
+        {
+          "type": "lineChart",
+          "x": 24,
+          "y": 536,
+          "width": 820,
+          "height": 172
+        },
+        {
+          "type": "card",
+          "x": 860,
+          "y": 536,
+          "width": 396,
+          "height": 80
+        },
+        {
+          "type": "card",
+          "x": 860,
+          "y": 628,
+          "width": 396,
+          "height": 80
+        }
+      ]
+    },
+    {
+      "page": "Trusts",
+      "visuals": [
+        {
+          "type": "textbox",
+          "x": 24,
+          "y": 12,
+          "width": 1000,
+          "height": 52
+        },
+        {
+          "type": "card",
+          "x": 24,
+          "y": 76,
+          "width": 300,
+          "height": 96
+        },
+        {
+          "type": "card",
+          "x": 336,
+          "y": 76,
+          "width": 300,
+          "height": 96
+        },
+        {
+          "type": "card",
+          "x": 648,
+          "y": 76,
+          "width": 300,
+          "height": 96
+        },
+        {
+          "type": "tableEx",
+          "x": 24,
+          "y": 184,
+          "width": 820,
+          "height": 524
+        },
+        {
+          "type": "clusteredBarChart",
+          "x": 860,
+          "y": 184,
+          "width": 396,
+          "height": 524
+        }
+      ]
+    }
+  ],
+  "base_url": "https://raw.githubusercontent.com/QaisBello/nhs-ae-spc/main/data/clean/"
+}

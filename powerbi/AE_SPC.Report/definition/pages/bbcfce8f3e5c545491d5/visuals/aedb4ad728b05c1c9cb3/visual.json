@@ -1,0 +1,188 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.13.0/schema.json",
+  "name": "aedb4ad728b05c1c9cb3",
+  "position": {
+    "x": 24,
+    "y": 184,
+    "z": 10,
+    "height": 524,
+    "width": 820,
+    "tabOrder": 10
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Entities"
+                    }
+                  },
+                  "Property": "name"
+                }
+              },
+              "queryRef": "Entities.name",
+              "nativeQueryRef": "name",
+              "displayName": "Trust"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Entities"
+                    }
+                  },
+                  "Property": "region"
+                }
+              },
+              "queryRef": "Entities.region",
+              "nativeQueryRef": "region",
+              "displayName": "Region"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Monthly"
+                    }
+                  },
+                  "Property": "Trust Latest %"
+                }
+              },
+              "queryRef": "Monthly.Trust Latest %",
+              "nativeQueryRef": "Trust Latest %",
+              "displayName": "Latest"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Monthly"
+                    }
+                  },
+                  "Property": "Trust SPC Mean"
+                }
+              },
+              "queryRef": "Monthly.Trust SPC Mean",
+              "nativeQueryRef": "Trust SPC Mean",
+              "displayName": "Mean"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Monthly"
+                    }
+                  },
+                  "Property": "Trust Lower Limit"
+                }
+              },
+              "queryRef": "Monthly.Trust Lower Limit",
+              "nativeQueryRef": "Trust Lower Limit",
+              "displayName": "Lower limit"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Monthly"
+                    }
+                  },
+                  "Property": "Trust Upper Limit"
+                }
+              },
+              "queryRef": "Monthly.Trust Upper Limit",
+              "nativeQueryRef": "Trust Upper Limit",
+              "displayName": "Upper limit"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Entities"
+                    }
+                  },
+                  "Property": "Variation"
+                }
+              },
+              "queryRef": "Entities.Variation",
+              "nativeQueryRef": "Variation"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Entities"
+                    }
+                  },
+                  "Property": "Assurance"
+                }
+              },
+              "queryRef": "Entities.Assurance",
+              "nativeQueryRef": "Assurance"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Measure": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "Monthly"
+                  }
+                },
+                "Property": "Trust Latest %"
+              }
+            },
+            "direction": "Descending"
+          }
+        ]
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Every trust (Type 1 departments)'"
+                }
+              }
+            },
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "12D"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}
